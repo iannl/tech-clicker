@@ -8,8 +8,12 @@ var config = {
         arcade: { debug: true }
     }
 };
+var saveInterval
+var monsterData
+var currentTech={}
 var game = new Phaser.Game(config)
 var locale=window.location.hash.replace('#','')
+if(locale=='cheatcodehere'){locale='en';cheat()}
 if(locale=='')locale='en'
 game.state.add('play', {
     preload: function() {
@@ -24,6 +28,10 @@ game.state.add('play', {
         this.game.load.image('laptop', 'assets/tech/laptop.png');
         this.game.load.image('desktop', 'assets/tech/desktop.png');
         this.game.load.image('supercomputer', 'assets/tech/supercomputer.png');
+        this.game.load.image('coolerbanana', 'assets/tech/coolerbanana.png');
+        this.game.load.image('brain', 'assets/tech/brain.png');
+        
+        this.game.load.image('unimplemented', 'assets/tech/unimplementedfeature.png');
 
         this.game.load.image('techCoins_coin', 'assets/icons/coin.png');
 
@@ -47,13 +55,18 @@ game.state.add('play', {
         this.game.cache.addBitmapData('button', buttonImage);
 
         // the main player
-        this.player = {
-            clickDmg: 1,
+        if(!localStorage.getItem('techClicker2Savestate')){
+        player = {
+            clickDmg: 0,
             techCoins: 0,
             dps: 0,
             monsterNum: 0,
-
+            researchStep:1,
+            currentTechHealth:128,
         };
+    }else{
+        player=JSON.parse(localStorage.getItem('techClicker2Savestate'))
+    }
 
         // world progression
         this.level = 1;
@@ -63,6 +76,7 @@ game.state.add('play', {
         this.levelKillsRequired = 10;
     },
     create: function() {
+        saveInterval=setInterval(function(){localStorage.setItem('techClicker2Savestate',JSON.stringify(player))},2000)
         var state = this;
 
         this.background = this.game.add.group();
@@ -79,10 +93,10 @@ game.state.add('play', {
         upgradeButtons.position.setTo(8, 8);
 
         var upgradeButtonsData = [
-            {icon: 'techCoins_coin', name: lang[locale].upgrade.multiplier.display, level: 0, cost: 30, purchaseHandler: function(button, player) {
+            {icon: 'techCoins_coin', name: lang[locale].upgrade.multiplier.display, level: player.clickDmg, cost: _getAdjustedCost(player.clickDmg,30), purchaseHandler: function(button, player) {
                 player.clickDmg += 1;
             }},
-            {icon: 'cursor', name: 'Auto Click', level: 0, cost: 25, purchaseHandler: function(button, player) {
+            {icon: 'cursor', name: 'Auto Click', level: player.dps, cost: _getAdjustedCost(player.dps,25), purchaseHandler: function(button, player) {
                 player.dps += 1;
             }}
         ];
@@ -99,13 +113,16 @@ game.state.add('play', {
             upgradeButtons.addChild(button);
         });
 
-        var monsterData = [
+        monsterData = [
             {name: lang[locale].tech.bananaphone.display,     image: 'bananaphone',    research: 128},
             {name: lang[locale].tech.calculator.display,      image: 'calculator',     research: 256},
             {name: lang[locale].tech.smartphone.display,      image: 'smartphone',     research: 512},
             {name: lang[locale].tech.laptop.display,          image: 'laptop',         research: 1024},
             {name: lang[locale].tech.desktop.display,         image: 'desktop',        research: 2048},
-            {name: lang[locale].tech.supercomputer.display,   image: 'supercomputer',  research: 100000000},
+            {name: lang[locale].tech.supercomputer.display,   image: 'supercomputer',  research: 4096},
+            {name: lang[locale].tech.coolerbanana.display,    image: 'coolerbanana',   research: 8192},
+            {name: lang[locale].tech.brain.display,           image: 'brain',          research: 16384},
+            {name: lang[locale].tech.unimplemented.display,   image: 'unimplemented',  research: 9999999999},
         ];
         this.monsters = this.game.add.group();
         var monster;
@@ -130,17 +147,18 @@ game.state.add('play', {
         window.testvar=this.monsters
 
         // display the monster front and center
-        this.currentTech = this.monsters.children[this.player.monsterNum]
-        this.currentTech.position.set(this.game.world.centerX + 100, this.game.world.centerY + 50);
+        currentTech = this.monsters.children[player.monsterNum]
+        if(player.techCoins>0)currentTech.health=player.currentTechHealth
+        currentTech.position.set(this.game.world.centerX + 100, this.game.world.centerY + 50);
 
         this.monsterInfoUI = this.game.add.group();
-        this.monsterInfoUI.position.setTo(this.currentTech.x - 220, this.currentTech.y + 120);
-        this.monsterNameText = this.monsterInfoUI.addChild(this.game.add.text(0, 0, this.currentTech.details.name, {
+        this.monsterInfoUI.position.setTo(currentTech.x - 220, currentTech.y + 120);
+        this.monsterNameText = this.monsterInfoUI.addChild(this.game.add.text(0, 0, currentTech.details.name, {
             font: '48px Arial Black',
             fill: '#fff',
             strokeThickness: 4
         }));
-        this.monsterHealthText = this.monsterInfoUI.addChild(this.game.add.text(0, 60, this.currentTech.health + ' '+lang[locale].research.display, {
+        this.monsterHealthText = this.monsterInfoUI.addChild(this.game.add.text(0, 60, player.currentTechHealth + ' '+lang[locale].research.display, {
             font: '22px Arial Black',
             fill: '#ff0000',
             strokeThickness: 4
@@ -176,7 +194,7 @@ game.state.add('play', {
         this.coins.setAll('techCoinsValue', 1);
         this.coins.callAll('events.onInputDown.add', 'events.onInputDown', this.onClickCoin, this);
         game.physics.arcade.enable(this.coins);
-        this.playertechCoinsText = this.add.text(30, 30, lang[locale].coin.display + ': ' + this.player.techCoins, {
+        playertechCoinsText = this.add.text(30, 30, lang[locale].coin.display + ': ' + player.techCoins, {
             font: '24px Arial Black',
             fill: '#fff',
             strokeThickness: 4
@@ -204,8 +222,8 @@ game.state.add('play', {
     },
     onDPS: function() {
         this.dpsTime++
-        if (this.player.dps > 0) {
-            if(this.dpsTime>(5/this.player.dps)*10){
+        if (player.dps > 0) {
+            if(this.dpsTime>(5/player.dps)*10){
                 this.dpsTime=0
                 this.onClickMonster(null,{positionDown:{x:0,y:0}})
             }
@@ -219,13 +237,13 @@ game.state.add('play', {
             return Math.ceil(button.details.cost + (button.details.level * 15));
         }
 
-        if (this.player.techCoins - getAdjustedCost() >= 0) {
-            this.player.techCoins -= getAdjustedCost();
-            this.playertechCoinsText.text = lang[locale].coin.display + ': ' + this.player.techCoins;
+        if (player.techCoins - getAdjustedCost() >= 0) {
+            player.techCoins -= getAdjustedCost();
+            playertechCoinsText.text = lang[locale].coin.display + ': ' + player.techCoins;
             button.details.level++;
             button.text.text = button.details.name + ': ' + button.details.level;
             button.costText.text = 'Cost: ' + getAdjustedCost();
-            button.details.purchaseHandler.call(this, button, this.player);
+            button.details.purchaseHandler.call(this, button, player);
         }
     },
     onClickCoin: function(coin) {
@@ -234,20 +252,19 @@ game.state.add('play', {
         }
 
         this.physics.arcade.moveToXY(coin, 0, 0, 0, 500);
-        var that=this
         setTimeout(function(){
             coin.kill()
 
             // give the player techCoins
-            that.player.techCoins += coin.techCoinsValue;
+            player.techCoins += coin.techCoinsValue;
             // update UI
-            that.playertechCoinsText.text = lang[locale].coin.display + ': ' + that.player.techCoins;
+            playertechCoinsText.text = lang[locale].coin.display + ': ' + player.techCoins;
             // move the coin
         }, 800);
 
     },
     onKilledMonster: function(monster) {
-        this.player.monsterNum++
+        player.monsterNum++
         // move the monster off screen again
         monster.position.set(1000, this.game.world.centerY);
 
@@ -262,11 +279,11 @@ game.state.add('play', {
         this.levelKillsText.text = 'Kills: ' + this.levelKills + '/' + this.levelKillsRequired;
 
         // pick a new monster
-        this.currentTech = this.monsters.children[this.player.monsterNum]
+        currentTech = this.monsters.children[player.monsterNum]
         // upgrade the monster based on level
-        this.currentTech.research = Math.ceil(this.currentTech.details.research + ((this.level - 1) * 10.6));
+        currentTech.research = Math.ceil(currentTech.details.research + ((this.level - 1) * 10.6));
         // make sure they are fully healed
-        this.currentTech.revive(this.currentTech.research);
+        currentTech.revive(currentTech.research);
     },
     onRevivedMonster: function(monster) {
         monster.position.set(this.game.world.centerX + 100, this.game.world.centerY + 50);
@@ -282,21 +299,40 @@ game.state.add('play', {
         coin.reset(this.game.world.centerX+Math.floor(Math.random() * 200 - 100), this.game.world.centerY+Math.floor(Math.random() * 200 - 100));
         coin.techCoinsValue = Math.round(this.level * 1.33);
         this.game.time.events.add(Phaser.Timer.SECOND * 0, this.onClickCoin, this, coin);
-        coin.techCoinsValue=this.player.clickDmg
-        this.currentTech.damage(1);
+        coin.techCoinsValue=player.clickDmg+1
+        currentTech.damage(player.researchStep);
+        player.currentTechHealth=currentTech.health
 
         // grab a damage text from the pool to display what happened
         var dmgText = this.dmgTextPool.getFirstExists(false);
         if (dmgText) {
-            dmgText.text = this.player.clickDmg;
+            dmgText.text = player.clickDmg+1;
             dmgText.reset(pointer.positionDown.x, pointer.positionDown.y);
             dmgText.alpha = 1;
             dmgText.tween.start();
         }
 
         // update the health text
-        this.monsterHealthText.text = this.currentTech.alive ? this.currentTech.health + ' '+lang[locale].research.display : 'DEAD';
+        this.monsterHealthText.text = currentTech.alive ? player.currentTechHealth + ' '+lang[locale].research.display : 'DEAD';
+        
+        // Prevent the game from saving in the unimplemented feature stage, so that the player can resume where they left off when a new tech is added.
+        if(player.monsterNum>monsterData.length-3&&player.currentTechHealth<=player.researchStep){localStorage.setItem('techClicker2Savestate',JSON.stringify(player));clearInterval(saveInterval)}
     }
 });
 
 game.state.start('play');
+
+function cheat(){
+    history.pushState("", document.title, window.location.pathname + window.location.search);
+    setTimeout(function(){player={
+        clickDmg: 99999,
+        techCoins: 99999,
+        dps: 99999,
+        monsterNum: 0,
+        researchStep:99999
+    }},500)
+}
+
+function _getAdjustedCost(level,cost) {
+    return Math.ceil(cost + (level * 15));
+}

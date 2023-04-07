@@ -13,6 +13,9 @@ var lang={
             laptop:{display:"Laptop"},
             desktop:{display:"Desktop"},
             supercomputer:{display:"Supercomputer"},
+            coolerbanana:{display:"Cooler Banana"},
+            brain:{display:"Brain"},
+            unimplemented:{display:"Unimplemented\nFeature"},
         },
         misc:{
             cost:{display:"Cost"}
@@ -20,8 +23,8 @@ var lang={
     },
     fr:{
         upgrade:{
-            multiplier:{display:"Coin Multiplier"},
-            autoclick:{display:"Auto Clicker"}
+            multiplier:{display:"Multiplicateur de Monnaie"},
+            autoclick:{display:"Clicker Automatique"}
         },
         research:{display:"Recherche jusqu'à la mise à niveau"},
         coin:{display:"Pièces techniques"},
@@ -29,12 +32,15 @@ var lang={
             bananaphone:{display:"Téléphone Banane"},
             calculator:{display:"Calculatrice"},
             smartphone:{display:"Phone Portable"},
-            laptop:{display:"Ordinateur portable"},
+            laptop:{display:"Ordinateur Portable"},
             desktop:{display:"Bureau"},
             supercomputer:{display:"Superordinateur"},
+            coolerbanana:{display:"Banane Plus Froide"},
+            brain:{display:"Cerveau"},
+            unimplemented:{display:"Fonctionnalité non\nmise en œuvre"},
         },
         misc:{
-            cost:{display:"Cost"}
+            cost:{display:"Coût"}
         }
     }
 }
